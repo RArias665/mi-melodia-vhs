@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edicion Especial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-magenta: #56b7c4;
+            --tape-gray: #1a1a1a;
+        }
+
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #222;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--neon-cyan);
+        }
+
+        body {
+            background-color: #0a0a0a;
+            color: #e0e0e0;
+            font-family: 'Share Tech Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            margin: 0;
+            padding: 20px 10px;
+            overflow-x: hidden;
+            overflow-y: auto;
+            background-image: 
+                linear-gradient(rgba(18, 16, 16, 0.9) 50%, rgba(0, 0, 0, 0.9) 50%),
+                linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
+            background-size: 100% 2px, 3px 100%;
+        }
+
+        /* ===== TELARAÑAS ESTÁTICAS ===== */
+        .cobweb {
+            position: fixed;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0.5;
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.1));
+            width: 150px;
+        }
+
+        @media (min-width: 768px) {
+            .cobweb { width: 250px; }
+        }
+
+        .cobweb-top-left { top: 0; left: 0; }
+        .cobweb-bottom-right { bottom: 0; right: 0; transform: scale(-1); }
+
+        /* Contenedor de la Estación */
+        .station-layout {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: relative;
+            z-index: 10;
+            margin-top: 40px;
+            margin-bottom: 60px;
+        }
+
+        /* Estante de Cintas */
+        .tape-rack {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            perspective: 1000px;
+            margin-bottom: 10px;
+            flex-wrap: nowrap;
+        }
+
+        .vhs-tape {
+            width: 55px;
+            height: 160px;
+            background: var(--tape-gray);
+            border: 2px solid #333;
+            border-radius: 4px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: rotateY(-20deg);
+            box-shadow: -5px 5px 15px rgba(0,0,0,0.5);
+            flex-shrink: 0;
+        }
+
+        @media (min-width: 640px) {
+            .vhs-tape { width: 65px; height: 190px; }
+        }
+
+        .vhs-tape:hover {
+            transform: translateY(-15px) rotateY(0deg);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 15px var(--neon-cyan);
+        }
+
+        .label-sticker {
+            position: absolute;
+            bottom: 15px;
+            left: 3px;
+            right: 3px;
+            height: 55px;
+            background: #eee;
+            color: #111;
+            padding: 4px;
+            font-size: 8px;
+            font-weight: bold;
+            text-align: center;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.1;
+            text-transform: uppercase;
+        }
+
+        /* Reproductor */
+        .vcr-player {
+            background: #121212;
+            border: 4px solid #222;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.8);
+            position: relative;
+        }
+
+        .video-window {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 2px solid #1a1a1a;
+            position: relative;
+        }
+
+        /* Personalización de los controles nativos para mostrar solo fullscreen si es posible */
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+        
+        /* Ocultar botones de descarga y otros controles innecesarios */
+        video::-internal-media-controls-download-button { display:none; }
+        video::-webkit-media-controls-enclosure { overflow:hidden; }
+        video::-webkit-media-controls-panel { width: calc(100% + 30px); } /* Ocultar parte de la barra */
+
+        video.loaded { opacity: 1; }
+
+        .vcr-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 15px;
+            background: #0d0d0d;
+            margin-top: 12px;
+            border-radius: 8px;
+            border: 1px solid #1a1a1a;
+        }
+
+        @media (min-width: 640px) {
+            .vcr-controls { flex-direction: row; justify-content: space-between; align-items: center; }
+        }
+
+        .vcr-display {
+            background: #4c4e4d;
+            color: #e7e7e7;
+            padding: 10px 15px;
+            border: 1px solid #3e4344;
+            min-width: 120px;
+            text-align: center;
+            font-size: 18px;
+            font-family: 'Courier New', monospace;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .vcr-btn {
+            flex: 1;
+            min-width: 50px;
+            max-width: 65px;
+            height: 45px;
+            background: linear-gradient(180deg, #2a2a2a, #1a1a1a);
+            border: 1px solid #444;
+            color: #aaa;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .vcr-btn:hover {
+            color: #fff;
+            border-color: #666;
+        }
+
+        .vcr-btn.active { 
+            color: var(--neon-cyan); 
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+        }
+
+        .instruction-text {
+            text-align: center;
+            color: var(--neon-magenta);
+            animation: blink 2s infinite;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        /* Botón personalizado de pantalla completa para asegurar control total */
+        .fullscreen-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #444;
+            color: white;
+            padding: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 20;
+            display: none; /* Se muestra cuando la cinta carga */
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+        .fullscreen-btn:hover { opacity: 1; background: var(--neon-cyan); color: black; }
+    </style>
+</head>
+<body>
+
+    <!-- Telarañas fijas en la ventana del navegador -->
+    <img src="telaraña.png" class="cobweb cobweb-top-left" alt="decoración esquina superior">
+    <img src="telaraña.png" class="cobweb cobweb-bottom-right" alt="decoración esquina inferior">
+
+    <div class="station-layout">
+        <div id="instruction" class="instruction-text text-xs sm:text-sm">
+            Selecciona una cinta 
+        </div>
+
+        <div class="tape-rack">
+            <div class="vhs-tape opacity-40">
+                <div class="label-sticker">DICIEMBRE 2023</div>
+            </div>
+            
+            <div class="vhs-tape" onclick="loadTape()">
+                <div class="label-sticker">NUESTRA HISTORIA/ MÚSICA (EXTRA) VOL.2</div>
+            </div>
+
+            <div class="vhs-tape opacity-40">
+                <div class="label-sticker">P y R ♡</div>
+            </div>
+        </div>
+
+        <div class="vcr-player">
+            <div class="video-window">
+                <!-- Se agrega controlsList para limitar lo que el navegador muestra -->
+                <video id="vhs-video" playsinline controlsList="nodownload noplaybackrate">
+                    <source id="video-source" src="" type="video/mp4">
+                </video>
+                <!-- Cuadradito manual de pantalla completa para asegurar visibilidad -->
+                <button id="fs-btn" class="fullscreen-btn" onclick="openFullscreen()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                </button>
+            </div>
+
+            <div class="vcr-controls">
+                <div class="flex flex-col items-center sm:items-start gap-1">
+                    <span class="text-[9px] text-gray-500 ml-1">TIEMPO</span>
+                    <div class="vcr-display" id="display-time">--:--:--</div>
+                </div>
+
+                <div class="flex gap-2 justify-center my-2 sm:my-0">
+                    <button class="vcr-btn" onclick="video.currentTime -= 10" title="Retroceder">◀◀</button>
+                    <button class="vcr-btn text-xl" id="play-btn" onclick="togglePlay()" title="Play/Pause">▶</button>
+                    <button class="vcr-btn" onclick="video.currentTime += 10" title="Adelantar">▶▶</button>
+                    <button class="vcr-btn" onclick="location.reload()" title="Expulsar">⏏</button>
+                </div>
+
+                <div class="flex flex-col items-center sm:items-end gap-2">
+                    <div class="flex items-center gap-2">
+                        <div id="power-led" class="w-2 h-2 rounded-full bg-red-900 transition-all duration-500"></div>
+                        <span class="text-[10px] text-gray-500 uppercase tracking-widest">System Active</span>
+                    </div>
+                    <span class="text-[9px] text-gray-700 font-bold">LG</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center text-[11px] text-gray-600 mt-2 tracking-[6px] uppercase font-bold">
+            Nuestros Recuerdos
+        </div>
+    </div>
+
+    <script>
+        const VIDEO_PATH = 'videopar.mp4'; 
+        const video = document.getElementById('vhs-video');
+        const display = document.getElementById('display-time');
+        const playBtn = document.getElementById('play-btn');
+        const powerLed = document.getElementById('power-led');
+        const instruction = document.getElementById('instruction');
+        const fsBtn = document.getElementById('fs-btn');
+
+        function loadTape() {
+            document.getElementById('video-source').src = VIDEO_PATH;
+            video.load();
+            video.classList.add('loaded');
+            fsBtn.style.display = 'block'; // Mostrar el cuadradito de pantalla completa
+            
+            powerLed.className = "w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#00f3ff]";
+            instruction.innerText = "CARGANDO MEMORIA...";
+            instruction.style.color = "#00f3ff";
+
+            video.play().then(() => {
+                instruction.innerText = "REPRODUCIENDO...";
+            }).catch(error => {
+                instruction.innerText = "LISTO - PRESIONA PLAY";
+            });
+            
+            setInterval(() => {
+                if (!video.paused || video.currentTime > 0) {
+                    let time = video.currentTime;
+                    let hrs = Math.floor(time / 3600).toString().padStart(2, '0');
+                    let mins = Math.floor((time % 3600) / 60).toString().padStart(2, '0');
+                    let secs = Math.floor(time % 60).toString().padStart(2, '0');
+                    display.innerText = `${hrs}:${mins}:${secs}`;
+                }
+            }, 1000);
+        }
+
+        function togglePlay() {
+            if (video.readyState === 0) {
+                loadTape();
+                return;
+            }
+            if (video.paused) video.play(); else video.pause();
+        }
+
+        function openFullscreen() {
+            if (video.requestFullscreen) {
+                video.requestFullscreen();
+            } else if (video.webkitRequestFullscreen) { /* Safari */
+                video.webkitRequestFullscreen();
+            } else if (video.msRequestFullscreen) { /* IE11 */
+                video.msRequestFullscreen();
+            }
+        }
+
+        video.onplay = () => { 
+            playBtn.innerText = "||"; 
+            playBtn.classList.add('active'); 
+            instruction.innerText = "REPRODUCIENDO...";
+        };
+        video.onpause = () => { 
+            playBtn.innerText = "▶"; 
+            playBtn.classList.remove('active'); 
+            instruction.innerText = "PAUSA";
+        };
+    </script>
+</body>
+</html>
